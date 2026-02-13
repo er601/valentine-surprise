@@ -1,0 +1,228 @@
+:root {
+  --bg0: #070814;
+  --cardBorder: rgba(255, 255, 255, 0.14);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.72);
+
+  --pink: #ff4fa7;
+  --red: #ff2b5c;
+  --glow: rgba(255, 79, 167, 0.35);
+  --glow2: rgba(255, 43, 92, 0.28);
+
+  --shadow: 0 20px 80px rgba(0, 0, 0, 0.55);
+  --radius: 22px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(1200px 800px at 50% 30%, #12143a 0%, var(--bg0) 55%, #050511 100%);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+}
+
+#bg3d, #fx {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#bg3d { z-index: 0; }
+#fx { z-index: 3; pointer-events: none; }
+
+.app {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.card {
+  width: min(720px, 92vw);
+  padding: clamp(18px, 3.4vw, 34px);
+  border-radius: var(--radius);
+  /* background: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.06)); */
+  background: linear-gradient(180deg, rgba(10, 12, 26, 0.55), rgba(10, 12, 26, 0.30));
+  border: 1px solid var(--cardBorder);
+  box-shadow: var(--shadow);
+  /* backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); */
+  position: relative;
+  overflow: hidden;
+
+  opacity: 0;
+  transform: translateY(14px);
+  animation: cardIn 900ms cubic-bezier(.2,.9,.2,1) forwards;
+}
+
+@keyframes cardIn { to { opacity: 1; transform: translateY(0px); } }
+
+.card::before, .card::after {
+  content: "";
+  position: absolute;
+  width: 440px;
+  height: 440px;
+  border-radius: 50%;
+  filter: blur(44px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.card::before {
+  left: -240px;
+  top: -280px;
+  background: radial-gradient(circle at 30% 30%, var(--glow), transparent 60%);
+}
+
+.card::after {
+  right: -240px;
+  bottom: -320px;
+  background: radial-gradient(circle at 70% 70%, var(--glow2), transparent 60%);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.80);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  margin-bottom: 14px;
+}
+
+.badge .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, var(--pink) 45%, var(--red) 90%);
+  box-shadow: 0 0 18px rgba(255, 79, 167, 0.5);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 18px rgba(255, 79, 167, 0.18);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeUp 700ms 160ms cubic-bezier(.2,.9,.2,1) forwards;
+}
+
+.subtitle {
+  margin: 14px 0 22px;
+  font-size: clamp(14px, 2vw, 18px);
+  color: var(--muted);
+  max-width: 48ch;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeUp 700ms 260ms cubic-bezier(.2,.9,.2,1) forwards;
+}
+
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0px); } }
+
+.buttons {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Buttons */
+.btn {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  min-width: 120px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  opacity: 0;
+  transform: translateY(8px);
+  animation: btnIn 650ms 360ms cubic-bezier(.2,.9,.2,1) forwards;
+
+  transition: transform 140ms ease, background 160ms ease, box-shadow 200ms ease, border-color 160ms ease;
+}
+
+@keyframes btnIn { to { opacity: 1; transform: translateY(0px); } }
+
+.btn:focus-visible {
+  outline: 3px solid rgba(255, 79, 167, 0.45);
+  outline-offset: 3px;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.btn:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+.btn-yes {
+  border-color: rgba(255, 79, 167, 0.35);
+  /* background: linear-gradient(180deg, rgba(255, 79, 167, 0.22), rgba(255, 43, 92, 0.12)); */
+  background: linear-gradient(180deg, rgba(10, 12, 26, 0.55), rgba(10, 12, 26, 0.30));
+  box-shadow: 0 0 30px rgba(255, 79, 167, 0.16);
+}
+
+.btn-yes:hover {
+  box-shadow: 0 0 40px rgba(255, 79, 167, 0.22), 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.btn-no {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* When NO becomes fixed runner */
+.btn-no-fixed {
+  /* prevent hover transform fighting with fixed movement */
+  transform: none !important;
+}
+
+/* placeholder for NO in the button row */
+.no-placeholder {
+  border-radius: 14px;
+}
+
+/* Hint */
+.hint {
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+}
+
+/* Modal root */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+}
+
+/* allow clicks through when closed */
+.modal-root[aria-hidden="true"] { pointer-events: none; }
+.modal-root[aria-hidden="false"] { pointer-events: auto; }
+
+@media (max-width: 420px) {
+  .btn { min-width: 100%; }
+}

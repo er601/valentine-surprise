@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Valentine Surprise</title>
+  </head>
+  <body>
+    <!-- Background Three.js canvas -->
+    <canvas id="bg3d" aria-hidden="true"></canvas>
+
+    <!-- Overlay canvas for confetti/hearts -->
+    <canvas id="fx" aria-hidden="true"></canvas>
+
+    <!-- Main content -->
+    <main class="app" role="main">
+      <section class="card" aria-label="Valentine question">
+        <div class="badge" aria-hidden="true">
+          <span class="dot"></span>
+          <span>Valentine Surprise</span>
+        </div>
+
+        <h1 class="title">Will you be my Valentine?</h1>
+        <p class="subtitle">I love you more than words can say.</p>
+
+        <div class="buttons" role="group" aria-label="Answer buttons">
+          <button id="btnYes" class="btn btn-yes" type="button">
+            YES
+          </button>
+
+          <button id="btnNo" class="btn btn-no" type="button">
+            NO
+          </button>
+        </div>
+
+        <p class="hint" aria-hidden="true">
+          Tip: try to catch “NO” 😄
+        </p>
+      </section>
+    </main>
+
+    <!-- Modal -->
+    <div id="modalRoot" class="modal-root" aria-hidden="true"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
