@@ -64,9 +64,9 @@ If you ever forget how loved you are… come back to this moment.
           </div>
 
           <div class="modal-actions">
-            <button class="modal-btn" type="button" data-modal-close>Close</button>
+            <button class="modal-btn" type="button" data-modal-close>Fermer</button>
             <button class="modal-btn modal-btn-primary" type="button" data-modal-music>
-              Play music
+              Lance la musique
             </button>
           </div>
 
@@ -151,15 +151,15 @@ If you ever forget how loved you are… come back to this moment.
       if (!playing) {
         await a.play();
         playing = true;
-        if (buttonEl) buttonEl.textContent = "Stop music";
+        if (buttonEl) buttonEl.textContent = "Coupe la musique";
       } else {
         stopMusic();
-        if (buttonEl) buttonEl.textContent = "Play music";
+        if (buttonEl) buttonEl.textContent = "Lance la musique";
       }
     } catch (err) {
       console.warn("Music failed. Check URL:", getMusicUrl(), err);
       playing = false;
-      if (buttonEl) buttonEl.textContent = "Play music";
+      if (buttonEl) buttonEl.textContent = "Lance la musique";
     }
   }
 

@@ -27,11 +27,12 @@ export function setupButtons({ yesBtn, noBtn, fxCanvas, modal, onYes }) {
     noCtrl.hide();
 
     modal.open({
-      title: "A letter for you ❤️",
+      title: "Une lettre pour toi ❤️",
       body:
-`Alina, thank you for being my favorite person.
-You make my world softer, brighter, and more beautiful.
-Thank you for every moment we’ve shared.`
+`Alina, tu es l'unique et la plus belle lumière de ma vie.
+À tes côtés, mon monde devient un écrin de douceur, d'éclat et de pure merveille.
+Chaque instant partagé avec toi est le plus précieux des trésors, un souffle de bonheur pur.
+Merci d'exister, tout simplement.`
     });
 
     try {
