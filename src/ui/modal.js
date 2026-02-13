@@ -1,22 +1,5 @@
-/**
- * src/ui/modal.js
- * Modal:
- * - Backdrop blur + dim
- * - Close by button, outside click, Esc
- * - Plays YOUR local music file (no CDN)
- *
- * HOW TO ADD YOUR MUSIC:
- * 1) Create folder: public/music/
- * 2) Put your file there, for example: public/music/my-song.mp3
- * 3) If your file name is different, change MUSIC_URL below.
- *
- * NOTE:
- * Browsers allow audio playback only after a user gesture (click/tap).
- * Here playback is triggered by the "Play music" button (and optionally from YES click).
- */
-
-const MUSIC_URL = "/music/my-song.mp3"; // <-- rename to your real file, e.g. "/music/lana.mp3"
-const DEFAULT_VOLUME = 0.6;             // 0.0 .. 1.0
+const MUSIC_FILE = "music/my-song.mp3";
+const DEFAULT_VOLUME = 0.6;
 
 function escapeHtml(str) {
   return String(str)
@@ -30,8 +13,11 @@ function escapeHtml(str) {
 export function createModal(rootEl) {
   let isOpen = false;
 
-  // HTMLAudioElement (your song)
   let audioEl = null;
+  let playing = false;
+
+  // NEW: close listeners
+  const closeListeners = new Set();
 
   const defaultContent = {
     title: "A letter for you ❤️",
@@ -42,26 +28,26 @@ If you ever forget how loved you are… come back to this moment.
     `.trim()
   };
 
+  function getMusicUrl() {
+    const base = import.meta.env.BASE_URL || "/";
+    return `${base}${MUSIC_FILE}`;
+  }
+
   function ensureAudio() {
     if (audioEl) return audioEl;
-    audioEl = new Audio(MUSIC_URL);
+    audioEl = new Audio();
+    audioEl.src = getMusicUrl();
     audioEl.loop = true;
     audioEl.preload = "auto";
     audioEl.volume = DEFAULT_VOLUME;
+    audioEl.addEventListener("ended", () => (playing = false));
     return audioEl;
-  }
-
-  function stopAudio(resetToStart = true) {
-    if (!audioEl) return;
-    try {
-      audioEl.pause();
-      if (resetToStart) audioEl.currentTime = 0;
-    } catch {}
   }
 
   function render(content = defaultContent) {
     const safeTitle = escapeHtml(content.title);
     const safeBody = escapeHtml(content.body).replaceAll("\n", "<br/>");
+    const shownUrl = escapeHtml(getMusicUrl());
 
     rootEl.innerHTML = `
       <div class="modal-backdrop" data-modal-backdrop>
@@ -85,7 +71,7 @@ If you ever forget how loved you are… come back to this moment.
           </div>
 
           <p class="modal-footnote" aria-hidden="true">
-            (Playing local file: <b>${escapeHtml(MUSIC_URL)}</b>)
+            (Music: <b>${shownUrl}</b>)
           </p>
         </div>
       </div>
@@ -109,9 +95,7 @@ If you ever forget how loved you are… come back to this moment.
     const closeEls = rootEl.querySelectorAll("[data-modal-close]");
     const musicBtn = rootEl.querySelector("[data-modal-music]");
 
-    closeEls.forEach((btn) =>
-      btn.addEventListener("click", close, { passive: true })
-    );
+    closeEls.forEach((btn) => btn.addEventListener("click", close, { passive: true }));
 
     backdrop?.addEventListener("click", (e) => {
       if (e.target === backdrop) close();
@@ -122,8 +106,6 @@ If you ever forget how loved you are… come back to this moment.
     });
 
     window.addEventListener("keydown", onKeyDown);
-
-    // focus
     (musicBtn || closeEls[0])?.focus?.();
   }
 
@@ -131,8 +113,7 @@ If you ever forget how loved you are… come back to this moment.
     if (!isOpen) return;
     isOpen = false;
 
-    // stop audio when closing modal
-    stopAudio(true);
+    stopMusic();
 
     const backdrop = rootEl.querySelector(".modal-backdrop");
     backdrop?.classList.remove("open");
@@ -143,33 +124,51 @@ If you ever forget how loved you are… come back to this moment.
     }, 180);
 
     window.removeEventListener("keydown", onKeyDown);
+
+    // NEW: notify listeners
+    closeListeners.forEach((fn) => {
+      try { fn(); } catch {}
+    });
   }
 
   function onKeyDown(e) {
     if (e.key === "Escape") close();
   }
 
+  function stopMusic() {
+    if (!audioEl) return;
+    try {
+      audioEl.pause();
+      audioEl.currentTime = 0;
+    } catch {}
+    playing = false;
+  }
+
   async function toggleMusic(buttonEl) {
     try {
       const a = ensureAudio();
 
-      if (a.paused) {
-        // Must be triggered by click/tap
+      if (!playing) {
         await a.play();
+        playing = true;
         if (buttonEl) buttonEl.textContent = "Stop music";
       } else {
-        a.pause();
-        a.currentTime = 0; // restart next time
+        stopMusic();
         if (buttonEl) buttonEl.textContent = "Play music";
       }
     } catch (err) {
-      // If blocked, user needs to click again (or disable autoplay restrictions)
-      console.warn("Audio play blocked or failed:", err);
+      console.warn("Music failed. Check URL:", getMusicUrl(), err);
+      playing = false;
       if (buttonEl) buttonEl.textContent = "Play music";
     }
   }
 
-  // Inject styles once (no extra CSS file)
+  // NEW: allow buttons.js to subscribe
+  function onClose(fn) {
+    closeListeners.add(fn);
+    return () => closeListeners.delete(fn);
+  }
+
   let stylesInjected = false;
   function injectStylesOnce() {
     if (stylesInjected) return;
@@ -289,6 +288,7 @@ If you ever forget how loved you are… come back to this moment.
         margin: 10px 0 0;
         color: rgba(255,255,255,0.55);
         font-size: 12px;
+        word-break: break-all;
       }
 
       @media (max-width: 420px) {
@@ -302,6 +302,7 @@ If you ever forget how loved you are… come back to this moment.
     open,
     close,
     isOpen: () => isOpen,
-    toggleMusic
+    toggleMusic,
+    onClose
   };
 }

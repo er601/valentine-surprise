@@ -1,9 +1,8 @@
 /**
  * Buttons logic:
- * - YES: hearts burst + open modal + optional auto-music
- * - NO: runs away by switching to position:fixed and moving via left/top (NO transform conflicts)
- *
- * Works on mouse + touch (pointer events).
+ * - YES: open modal, hide NO, start music
+ * - NO: runs away (fixed) and SHRINKS on hover/attempts
+ * - When modal closes: restore NO back and reset size
  */
 
 export function setupButtons({ yesBtn, noBtn, fxCanvas, modal, onYes }) {
@@ -13,85 +12,91 @@ export function setupButtons({ yesBtn, noBtn, fxCanvas, modal, onYes }) {
   }
 
   const fx = createHeartsFx(fxCanvas);
+  const noCtrl = createRunawayNo(noBtn);
+
+  // bring NO back after modal close
+  modal.onClose?.(() => {
+    noCtrl.restore();
+  });
 
   // YES
   yesBtn.addEventListener("click", async () => {
     fx.burst();
     onYes?.();
 
+    noCtrl.hide();
+
     modal.open({
       title: "A letter for you ❤️",
       body:
 `Alina, thank you for being my favorite person.
 You make my world softer, brighter, and more beautiful.
-Thank you for every moment we’ve shared.
-I hope this little surprise brings a smile to your face, just like you do to mine every day.
-I love you so much.`
+Thank you for every moment we’ve shared.`
     });
 
-    // Optional: auto-start music after YES (counts as user gesture)
     try {
       await modal.toggleMusic?.();
     } catch {}
   });
 
-  // ---------------------------------
-  // NO runaway (robust fixed-position)
-  // ---------------------------------
-  const no = createRunawayNo(noBtn, { modal, fx });
-
-  // Mouse/touch near detection on the whole window
+  // when mouse comes near -> run
   window.addEventListener(
     "pointermove",
     (e) => {
       if (modal.isOpen?.()) return;
-      no.runAwayFrom(e.clientX, e.clientY, false);
+      noCtrl.runAwayFrom(e.clientX, e.clientY, false);
     },
     { passive: true }
   );
 
-  // Guaranteed escape when pointer enters the NO button
+  // hover on NO -> shrink + run
   noBtn.addEventListener(
     "pointerenter",
     (e) => {
       if (modal.isOpen?.()) return;
-      no.runAwayFrom(e.clientX, e.clientY, true);
+      noCtrl.shrinkHover();
+      noCtrl.runAwayFrom(e.clientX, e.clientY, true);
     },
     { passive: true }
   );
 
-  // Touch: if they try to press NO, it escapes + small tease burst
+  // attempt press NO -> shrink more + run + tease
   noBtn.addEventListener(
     "pointerdown",
     (e) => {
       if (modal.isOpen?.()) return;
-      no.runAwayFrom(e.clientX, e.clientY, true);
+      noCtrl.shrinkPress();
+      noCtrl.runAwayFrom(e.clientX, e.clientY, true);
       fx.tease(e.clientX, e.clientY);
       e.preventDefault();
     },
     { passive: false }
   );
 
-  // Keep inside viewport after resize/scroll
-  window.addEventListener("resize", () => no.reclamp(), { passive: true });
-  window.addEventListener("scroll", () => no.reclamp(), { passive: true });
+  window.addEventListener("resize", () => noCtrl.reclamp(), { passive: true });
+  window.addEventListener("scroll", () => noCtrl.reclamp(), { passive: true });
 
   return { fx };
 }
 
-/**
- * Turns the NO button into a fixed-position "runner"
- * while keeping layout stable using a placeholder.
- */
-function createRunawayNo(noBtn, { modal, fx }) {
+function createRunawayNo(noBtn) {
   let isFixed = false;
+  let hidden = false;
+
+  const originalParent = noBtn.parentNode;
+  const originalNextSibling = noBtn.nextSibling;
+
   let placeholder = null;
 
-  // current fixed position
   let left = 0;
   let top = 0;
 
-  // throttle to avoid jitter
+  // scale state
+  let scale = 1.0;
+  const minScale = 0.55;
+  const hoverShrink = 0.90;  // stronger so you SEE it
+  const pressShrink = 0.85;
+
   let lastMove = 0;
   const throttleMs = 120;
 
@@ -99,24 +104,81 @@ function createRunawayNo(noBtn, { modal, fx }) {
     return Math.max(min, Math.min(max, v));
   }
 
-  function makeFixedIfNeeded() {
-    if (isFixed) return;
+  // ✅ IMPORTANT: force transform with !important (wins over any CSS)
+  function applyScale() {
+    noBtn.style.setProperty("transform", `scale(${scale})`, "important");
+    noBtn.style.setProperty("transform-origin", "center center", "important");
+  }
 
-    // create placeholder to keep layout where the button was
+  function resetScale() {
+    scale = 1.0;
+    applyScale();
+  }
+
+  function shrinkHover() {
+    if (hidden) return;
+    scale = Math.max(minScale, scale * hoverShrink);
+    applyScale();
+  }
+
+  function shrinkPress() {
+    if (hidden) return;
+    scale = Math.max(minScale, scale * pressShrink);
+    applyScale();
+  }
+
+  function hide() {
+    hidden = true;
+    noBtn.style.display = "none";
+    if (placeholder) placeholder.style.display = "none";
+  }
+
+  function restore() {
+    hidden = false;
+
+    // remove placeholder
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.removeChild(placeholder);
+    }
+    placeholder = null;
+
+    // move back to original layout position
+    if (originalNextSibling) originalParent.insertBefore(noBtn, originalNextSibling);
+    else originalParent.appendChild(noBtn);
+
+    // remove fixed styles
+    noBtn.classList.remove("btn-no-fixed");
+    noBtn.style.position = "";
+    noBtn.style.left = "";
+    noBtn.style.top = "";
+    noBtn.style.zIndex = "";
+    noBtn.style.margin = "";
+    noBtn.style.transition = "";
+    noBtn.style.display = "";
+
+    isFixed = false;
+
+    // reset scale
+    resetScale();
+
+    // also remove any leftover transform important (keep it but at scale 1)
+    // (already done by resetScale)
+  }
+
+  function makeFixedIfNeeded() {
+    if (isFixed || hidden) return;
+
     const rect = noBtn.getBoundingClientRect();
+
     placeholder = document.createElement("span");
     placeholder.className = "no-placeholder";
     placeholder.style.display = "inline-block";
     placeholder.style.width = `${rect.width}px`;
     placeholder.style.height = `${rect.height}px`;
 
-    // insert placeholder where button currently sits
-    noBtn.parentNode.insertBefore(placeholder, noBtn);
-
-    // move NO button to body, so it can freely move above everything
+    originalParent.insertBefore(placeholder, noBtn);
     document.body.appendChild(noBtn);
 
-    // set fixed position at the same screen spot
     left = rect.left;
     top = rect.top;
 
@@ -126,14 +188,15 @@ function createRunawayNo(noBtn, { modal, fx }) {
     noBtn.style.top = `${top}px`;
     noBtn.style.zIndex = "10";
     noBtn.style.margin = "0";
-    noBtn.style.transform = "none"; // IMPORTANT: no transform conflicts
-    noBtn.style.transition = "left 240ms cubic-bezier(.2,.9,.2,1), top 240ms cubic-bezier(.2,.9,.2,1), background 160ms ease, box-shadow 200ms ease, border-color 160ms ease";
 
+    noBtn.style.transition =
+      "left 240ms cubic-bezier(.2,.9,.2,1), top 240ms cubic-bezier(.2,.9,.2,1), transform 220ms ease";
+
+    applyScale();
     isFixed = true;
   }
 
-  function getButtonRectFixed() {
-    // When fixed, getBoundingClientRect gives current screen rect
+  function getRect() {
     return noBtn.getBoundingClientRect();
   }
 
@@ -141,18 +204,17 @@ function createRunawayNo(noBtn, { modal, fx }) {
     const padding = 12;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
-    const minL = padding;
-    const minT = padding;
-    const maxL = vw - rect.width - padding;
-    const maxT = vh - rect.height - padding;
-
-    return { minL, maxL, minT, maxT };
+    return {
+      minL: padding,
+      minT: padding,
+      maxL: vw - rect.width - padding,
+      maxT: vh - rect.height - padding
+    };
   }
 
   function reclamp() {
-    if (!isFixed) return;
-    const rect = getButtonRectFixed();
+    if (!isFixed || hidden) return;
+    const rect = getRect();
     const { minL, maxL, minT, maxT } = boundsForRect(rect);
 
     left = clamp(left, minL, maxL);
@@ -163,16 +225,15 @@ function createRunawayNo(noBtn, { modal, fx }) {
   }
 
   function runAwayFrom(px, py, force = false) {
+    if (hidden) return;
+
     const now = performance.now();
     if (!force && now - lastMove < throttleMs) return;
     lastMove = now;
 
-    if (modal.isOpen?.()) return;
-
     makeFixedIfNeeded();
 
-    const rect = getButtonRectFixed();
-
+    const rect = getRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
 
@@ -180,15 +241,12 @@ function createRunawayNo(noBtn, { modal, fx }) {
     const dy0 = cy - py;
     const dist = Math.hypot(dx0, dy0);
 
-    // Only run when near unless forced
-    const dangerRadius = Math.max(120, Math.min(200, rect.width * 2.0));
+    const dangerRadius = Math.max(120, Math.min(210, rect.width * 2.0));
     if (!force && dist > dangerRadius) return;
 
-    // direction away
     let dx = dx0 / (dist || 1);
     let dy = dy0 / (dist || 1);
 
-    // playful randomness
     dx += (Math.random() * 2 - 1) * 0.35;
     dy += (Math.random() * 2 - 1) * 0.35;
 
@@ -196,28 +254,20 @@ function createRunawayNo(noBtn, { modal, fx }) {
     dx /= len;
     dy /= len;
 
-    const step = Math.min(270, Math.max(160, window.innerWidth * 0.24));
+    const step = Math.min(280, Math.max(160, window.innerWidth * 0.24));
 
     left += dx * step;
     top += dy * step;
 
-    // clamp to screen
     const { minL, maxL, minT, maxT } = boundsForRect(rect);
     left = clamp(left, minL, maxL);
     top = clamp(top, minT, maxT);
-
-    // if got stuck (corner), jump somewhere random safe
-    const stuck = (Math.abs(dx0) < 1 && Math.abs(dy0) < 1);
-    if (stuck) {
-      left = clamp(Math.random() * (maxL - minL) + minL, minL, maxL);
-      top = clamp(Math.random() * (maxT - minT) + minT, minT, maxT);
-    }
 
     noBtn.style.left = `${left}px`;
     noBtn.style.top = `${top}px`;
   }
 
-  return { runAwayFrom, reclamp };
+  return { runAwayFrom, reclamp, hide, restore, shrinkHover, shrinkPress };
 }
 
 /* -------------------------
@@ -226,7 +276,6 @@ function createRunawayNo(noBtn, { modal, fx }) {
 
 function createHeartsFx(canvas) {
   const ctx = canvas.getContext("2d", { alpha: true });
-
   const hearts = [];
   let running = false;
   let lastT = performance.now();

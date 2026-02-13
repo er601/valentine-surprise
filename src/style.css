@@ -196,8 +196,8 @@ html, body {
 
 /* When NO becomes fixed runner */
 .btn-no-fixed {
-  /* prevent hover transform fighting with fixed movement */
-  transform: none !important;
+  /* allow JS to set transform: scale(...) */
+  transform: none;
 }
 
 /* placeholder for NO in the button row */
